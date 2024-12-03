@@ -20,7 +20,7 @@ REG_sklearn_ann = 1
 
 
 class DecisionTreeRegressorWithLinearLeafRegression(tree.DecisionTreeRegressor):
-    ''' Decision tree regressor with added linear (bayesian ridge) regression
+    """Decision tree regressor with added linear (bayesian ridge) regression
     for all the data points falling within each decision tree leaf node.
 
     Parameters
@@ -39,15 +39,20 @@ class DecisionTreeRegressorWithLinearLeafRegression(tree.DecisionTreeRegressor):
     Returns
     -------
     None
-    '''
-    def __init__(self, linearRegressionExtrapolationRatio=0.25, decisionTreeRegressorOpt={}):
-        super(DecisionTreeRegressorWithLinearLeafRegression, self).__init__(**decisionTreeRegressorOpt)
+    """
+
+    def __init__(
+        self, linearRegressionExtrapolationRatio=0.25, decisionTreeRegressorOpt={}
+    ):
+        super(DecisionTreeRegressorWithLinearLeafRegression, self).__init__(
+            **decisionTreeRegressorOpt
+        )
         self.decisionTreeRegressorOpt = decisionTreeRegressorOpt
         self.leafParameters = {}
         self.linearRegressionExtrapolationRatio = linearRegressionExtrapolationRatio
 
     def fit(self, X, y, sample_weight, fitOpt={}):
-        ''' Build a decision tree regressor from the training set (X, y).
+        """Build a decision tree regressor from the training set (X, y).
 
         Parameters
         ----------
@@ -73,28 +78,33 @@ class DecisionTreeRegressorWithLinearLeafRegression(tree.DecisionTreeRegressor):
         Returns
         -------
         Self
-        '''
+        """
 
         # Fit a normal regression tree
-        super(DecisionTreeRegressorWithLinearLeafRegression, self).fit(X, y, sample_weight,
-                                                                       **fitOpt)
+        super(DecisionTreeRegressorWithLinearLeafRegression, self).fit(
+            X, y, sample_weight, **fitOpt
+        )
 
         # Create a linear regression for all input points which fall into
         # one output leaf
-        predictedValues = super(DecisionTreeRegressorWithLinearLeafRegression, self).predict(X)
+        predictedValues = super(
+            DecisionTreeRegressorWithLinearLeafRegression, self
+        ).predict(X)
         leafValues = np.unique(predictedValues)
         for value in leafValues:
             ind = predictedValues == value
             leafLinearRegrsion = linear_model.BayesianRidge()
             leafLinearRegrsion.fit(X[ind, :], y[ind])
-            self.leafParameters[value] = {"linearRegression": leafLinearRegrsion,
-                                          "max": np.max(y[ind]),
-                                          "min": np.min(y[ind])}
+            self.leafParameters[value] = {
+                "linearRegression": leafLinearRegrsion,
+                "max": np.max(y[ind]),
+                "min": np.min(y[ind]),
+            }
 
         return self
 
     def predict(self, X, predictOpt={}):
-        ''' Predict class or regression value for X.
+        """Predict class or regression value for X.
 
         Parameters
         ----------
@@ -112,30 +122,37 @@ class DecisionTreeRegressorWithLinearLeafRegression(tree.DecisionTreeRegressor):
         -------
         y: array of shape = [n_samples] or [n_samples, n_outputs]
             The predicted classes, or the predict values.
-        '''
+        """
 
         # Do normal regression tree prediction
-        y = super(DecisionTreeRegressorWithLinearLeafRegression, self).predict(X, **predictOpt)
+        y = super(DecisionTreeRegressorWithLinearLeafRegression, self).predict(
+            X, **predictOpt
+        )
 
         # And also apply per-leaf linear regression
         for leafValue in self.leafParameters.keys():
             ind = y == leafValue
             if X[ind, :].size > 0:
-                y[ind] = self.leafParameters[leafValue]["linearRegression"].predict(X[ind, :])
+                y[ind] = self.leafParameters[leafValue]["linearRegression"].predict(
+                    X[ind, :]
+                )
                 # Limit extrapolation
                 extrapolationRange = self.linearRegressionExtrapolationRatio * (
-                                        self.leafParameters[leafValue]["max"] -
-                                        self.leafParameters[leafValue]["min"])
-                y[ind] = np.maximum(y[ind],
-                                    self.leafParameters[leafValue]["min"] - extrapolationRange)
-                y[ind] = np.minimum(y[ind],
-                                    self.leafParameters[leafValue]["max"] + extrapolationRange)
+                    self.leafParameters[leafValue]["max"]
+                    - self.leafParameters[leafValue]["min"]
+                )
+                y[ind] = np.maximum(
+                    y[ind], self.leafParameters[leafValue]["min"] - extrapolationRange
+                )
+                y[ind] = np.minimum(
+                    y[ind], self.leafParameters[leafValue]["max"] + extrapolationRange
+                )
 
         return y
 
 
 class DecisionTreeSharpener(object):
-    ''' Decision tree based sharpening (disaggregation) of low-resolution
+    """Decision tree based sharpening (disaggregation) of low-resolution
     images using high-resolution images. The implementation is mostly based on [Gao2012].
 
     Decision tree based regressor is trained with high-resolution data resampled to
@@ -222,19 +239,22 @@ class DecisionTreeSharpener(object):
     .. [Gao2012] Gao, F., Kustas, W. P., & Anderson, M. C. (2012). A Data
        Mining Approach for Sharpening Thermal Satellite Imagery over Land.
        Remote Sensing, 4(11), 3287–3319. https://doi.org/10.3390/rs4113287
-    '''
-    def __init__(self,
-                 highResFiles,
-                 lowResFiles,
-                 lowResQualityFiles=[],
-                 lowResGoodQualityFlags=[],
-                 cvHomogeneityThreshold=0,
-                 movingWindowSize=0,
-                 disaggregatingTemperature=False,
-                 perLeafLinearRegression=True,
-                 linearRegressionExtrapolationRatio=0.25,
-                 regressorOpt={},
-                 baggingRegressorOpt={}):
+    """
+
+    def __init__(
+        self,
+        highResFiles,
+        lowResFiles,
+        lowResQualityFiles=[],
+        lowResGoodQualityFlags=[],
+        cvHomogeneityThreshold=0,
+        movingWindowSize=0,
+        disaggregatingTemperature=False,
+        perLeafLinearRegression=True,
+        linearRegressionExtrapolationRatio=0.25,
+        regressorOpt={},
+        baggingRegressorOpt={},
+    ):
 
         self.highResFiles = highResFiles
         self.lowResFiles = lowResFiles
@@ -242,18 +262,23 @@ class DecisionTreeSharpener(object):
         self.lowResGoodQualityFlags = lowResGoodQualityFlags
 
         if len(self.highResFiles) != len(self.lowResFiles):
-            print("There must be a matching high resolution file for each low resolution file")
+            print(
+                "There must be a matching high resolution file for each low resolution file"
+            )
             raise IOError
 
-        if len(self.lowResQualityFiles) == 0 or \
-           (len(self.lowResQualityFiles) == 1 and self.lowResQualityFiles[0] == ""):
+        if len(self.lowResQualityFiles) == 0 or (
+            len(self.lowResQualityFiles) == 1 and self.lowResQualityFiles[0] == ""
+        ):
             self.useQuality_LR = False
         else:
             self.useQuality_LR = True
 
         if self.useQuality_LR and len(self.lowResQualityFiles) != len(self.lowResFiles):
-            print("The number of quality files must be 0 or the same as number of low " +
-                  "resolution files")
+            print(
+                "The number of quality files must be 0 or the same as number of low "
+                + "resolution files"
+            )
             raise IOError
 
         self.cvHomogeneityThreshold = cvHomogeneityThreshold
@@ -284,7 +309,7 @@ class DecisionTreeSharpener(object):
         self.baggingRegressorOpt = baggingRegressorOpt
 
     def trainSharpener(self):
-        ''' Train the sharpener using high- and low-resolution input files
+        """Train the sharpener using high- and low-resolution input files
         and settings specified in the constructor. Local (moving window) and
         global regression decision trees are trained with high-resolution data
         resampled to low resolution and low-resolution data. The training
@@ -300,7 +325,7 @@ class DecisionTreeSharpener(object):
         Returns
         -------
         None
-        '''
+        """
 
         # Select good data (training samples) from low- and high-resolution
         # input images.
@@ -320,10 +345,13 @@ class DecisionTreeSharpener(object):
             # pixels which are considered to be of good quality
             if self.useQuality_LR:
                 quality_LR = gdal.Open(self.lowResQualityFiles[fileNum])
-                subsetQuality_LR = utils.reprojectSubsetLowResScene(scene_HR, quality_LR)
+                subsetQuality_LR = utils.reprojectSubsetLowResScene(
+                    scene_HR, quality_LR
+                )
                 subsetQualityMask = subsetQuality_LR.GetRasterBand(1).ReadAsArray()
-                qualityPix = np.in1d(subsetQualityMask.ravel(),
-                                     self.lowResGoodQualityFlags).reshape(subsetQualityMask.shape)
+                qualityPix = np.in1d(
+                    subsetQualityMask.ravel(), self.lowResGoodQualityFlags
+                ).reshape(subsetQualityMask.shape)
                 quality_LR = None
             else:
                 qualityPix = np.ones(data_LR.shape).astype(bool)
@@ -335,7 +363,7 @@ class DecisionTreeSharpener(object):
             # extracting sub-low-res-pixel homogeneity statistics
             resMean, resStd = utils.resampleHighResToLowRes(scene_HR, subsetScene_LR)
             resMean[resMean == 0] = 0.000001
-            resCV = np.sum(resStd/resMean, 2) / resMean.shape[2]
+            resCV = np.sum(resStd / resMean, 2) / resMean.shape[2]
             resCV[np.isnan(resCV)] = 1000
 
             # Resampled high resolution pixels where at least one "parameter"
@@ -349,21 +377,57 @@ class DecisionTreeSharpener(object):
             # then calculate the extent of each sampling window in low
             # resolution pixels
             if self.movingWindowSize > 0:
-                for y in range(int(math.ceil(data_LR.shape[0]/self.movingWindowSize))):
-                    for x in range(int(math.ceil(data_LR.shape[1]/self.movingWindowSize))):
-                        windows.append([int(max(y*self.movingWindowSize-self.movingWindowExtension, 0)),
-                                        int(min((y+1)*self.movingWindowSize+self.movingWindowExtension,
-                                                data_LR.shape[0])),
-                                        int(max(x*self.movingWindowSize-self.movingWindowExtension, 0)),
-                                        int(min((x+1)*self.movingWindowSize+self.movingWindowExtension,
-                                                data_LR.shape[1]))])
+                for y in range(
+                    int(math.ceil(data_LR.shape[0] / self.movingWindowSize))
+                ):
+                    for x in range(
+                        int(math.ceil(data_LR.shape[1] / self.movingWindowSize))
+                    ):
+                        windows.append(
+                            [
+                                int(
+                                    max(
+                                        y * self.movingWindowSize
+                                        - self.movingWindowExtension,
+                                        0,
+                                    )
+                                ),
+                                int(
+                                    min(
+                                        (y + 1) * self.movingWindowSize
+                                        + self.movingWindowExtension,
+                                        data_LR.shape[0],
+                                    )
+                                ),
+                                int(
+                                    max(
+                                        x * self.movingWindowSize
+                                        - self.movingWindowExtension,
+                                        0,
+                                    )
+                                ),
+                                int(
+                                    min(
+                                        (x + 1) * self.movingWindowSize
+                                        + self.movingWindowExtension,
+                                        data_LR.shape[1],
+                                    )
+                                ),
+                            ]
+                        )
                         # Save the extents of this window in projection coordinates as
                         # UL and LR point coordinates
-                        ul = utils.pix2point([x*self.movingWindowSize, y*self.movingWindowSize],
-                                             gt_LR)
-                        lr = utils.pix2point([(x+1)*self.movingWindowSize,
-                                              (y+1)*self.movingWindowSize],
-                                             gt_LR)
+                        ul = utils.pix2point(
+                            [x * self.movingWindowSize, y * self.movingWindowSize],
+                            gt_LR,
+                        )
+                        lr = utils.pix2point(
+                            [
+                                (x + 1) * self.movingWindowSize,
+                                (y + 1) * self.movingWindowSize,
+                            ],
+                            gt_LR,
+                        )
                         extents.append([ul, lr])
 
             # And always add the whole extent of low res image to also estimate
@@ -384,35 +448,49 @@ class DecisionTreeSharpener(object):
                 # Good pixels are those where low res data quality is good and
                 # high res data is homonogenous
                 if self.autoAdjustCvThreshold:
-                    g = np.logical_and.reduce((qualityPixWindow, resCVWindow < 1000,
-                                               resCVWindow > 0))
+                    g = np.logical_and.reduce(
+                        (qualityPixWindow, resCVWindow < 1000, resCVWindow > 0)
+                    )
                     if ~np.any(g):
                         self.cvHomogeneityThreshold = 0
                     else:
-                        self.cvHomogeneityThreshold = np.percentile(resCVWindow[g],
-                                                                    self.precentileThreshold)
-                    print('Homogeneity CV threshold: %.2f' % self.cvHomogeneityThreshold)
-                homogenousPix = np.logical_and(resCVWindow < self.cvHomogeneityThreshold,
-                                               resCVWindow > 0)
+                        self.cvHomogeneityThreshold = np.percentile(
+                            resCVWindow[g], self.precentileThreshold
+                        )
+                    print(
+                        "Homogeneity CV threshold: %.2f" % self.cvHomogeneityThreshold
+                    )
+                homogenousPix = np.logical_and(
+                    resCVWindow < self.cvHomogeneityThreshold, resCVWindow > 0
+                )
                 goodPix = np.logical_and(homogenousPix, qualityPixWindow)
 
-                goodData_LR[i] = utils.appendNpArray(goodData_LR[i],
-                                                     data_LR[rows, cols][goodPix])
-                goodData_HR[i] = utils.appendNpArray(goodData_HR[i],
-                                                     resMean[rows, cols, :][goodPix, :], axis=0)
+                goodData_LR[i] = utils.appendNpArray(
+                    goodData_LR[i], data_LR[rows, cols][goodPix]
+                )
+                goodData_HR[i] = utils.appendNpArray(
+                    goodData_HR[i], resMean[rows, cols, :][goodPix, :], axis=0
+                )
 
                 # Also estimate weight given to each pixel as the inverse of its
                 # heterogeneity
-                w = 1/resCVWindow[goodPix]
+                w = 1 / resCVWindow[goodPix]
                 weight[i] = utils.appendNpArray(weight[i], w)
 
                 # Print some stats
                 if np.prod(data_LR[rows, cols][qualityPixWindow].shape) > 0:
-                    percentageUsedPixels = int(float(np.prod(goodData_LR[i].shape)) /
-                                               float(np.prod(data_LR[rows, cols][qualityPixWindow].shape)) * 100)
-                    print('Number of training elements for is ' +
-                          str(np.prod(goodData_LR[i].shape)) + ' representing ' +
-                          str(percentageUsedPixels)+'% of avaiable low-resolution data.')
+                    percentageUsedPixels = int(
+                        float(np.prod(goodData_LR[i].shape))
+                        / float(np.prod(data_LR[rows, cols][qualityPixWindow].shape))
+                        * 100
+                    )
+                    print(
+                        "Number of training elements for is "
+                        + str(np.prod(goodData_LR[i].shape))
+                        + " representing "
+                        + str(percentageUsedPixels)
+                        + "% of avaiable low-resolution data."
+                    )
 
             # Close all files
             scene_HR = None
@@ -429,16 +507,17 @@ class DecisionTreeSharpener(object):
         # regressions
         self.reg = [None for _ in range(windowsNum)]
         for i in range(windowsNum):
-            if i < windowsNum-1:
+            if i < windowsNum - 1:
                 local = True
             else:
                 local = False
             if len(goodData_LR[i]) > 0:
-                self.reg[i] = \
-                    self._doFit(goodData_LR[i], goodData_HR[i], weight[i], local)
+                self.reg[i] = self._doFit(
+                    goodData_LR[i], goodData_HR[i], weight[i], local
+                )
 
     def applySharpener(self, highResFilename, lowResFilename=None):
-        ''' Apply the trained sharpener to a given high-resolution image to
+        """Apply the trained sharpener to a given high-resolution image to
         derive corresponding disaggregated low-resolution image. If local
         regressions were used during training then they will only be applied
         where their moving window extent overlaps with the high resolution
@@ -466,15 +545,16 @@ class DecisionTreeSharpener(object):
         outImage: GDAL memory file object
             The file object contains an in-memory, georeferenced disaggregator
             output.
-        '''
+        """
 
         # Open and read the high resolution input file
         highResFile = gdal.Open(highResFilename)
-        inData = np.zeros((highResFile.RasterYSize, highResFile.RasterXSize,
-                           highResFile.RasterCount))
+        inData = np.zeros(
+            (highResFile.RasterYSize, highResFile.RasterXSize, highResFile.RasterCount)
+        )
         for band in range(highResFile.RasterCount):
-            data = highResFile.GetRasterBand(band+1).ReadAsArray().astype(float)
-            no_data = highResFile.GetRasterBand(band+1).GetNoDataValue()
+            data = highResFile.GetRasterBand(band + 1).ReadAsArray().astype(float)
+            no_data = highResFile.GetRasterBand(band + 1).GetNoDataValue()
             data[data == no_data] = np.nan
             inData[:, :, band] = data
         gt = highResFile.GetGeoTransform()
@@ -486,7 +566,7 @@ class DecisionTreeSharpener(object):
         # Temporarly get rid of NaN's
         nanInd = np.isnan(inData)
         inData[nanInd] = 0
-        outWindowData = np.empty((ysize, xsize))*np.nan
+        outWindowData = np.empty((ysize, xsize)) * np.nan
 
         # Do the downscailing on the moving windows if there are any
         for i, extent in enumerate(self.windowExtents):
@@ -496,14 +576,15 @@ class DecisionTreeSharpener(object):
                 [maxX, maxY] = utils.point2pix(extent[1], gt)  # LR
                 [maxX, maxY] = [min(maxX, xsize), min(maxY, ysize)]
                 windowInData = inData[minY:maxY, minX:maxX, :]
-                outWindowData[minY:maxY, minX:maxX] = \
-                    self._doPredict(windowInData, self.reg[i])
+                outWindowData[minY:maxY, minX:maxX] = self._doPredict(
+                    windowInData, self.reg[i]
+                )
 
         # Do the downscailing on the whole input image
         if self.reg[-1] is not None:
             outFullData = self._doPredict(inData, self.reg[-1])
         else:
-            outFullData = np.empty((ysize, xsize))*np.nan
+            outFullData = np.empty((ysize, xsize)) * np.nan
 
         # Combine the windowed and whole image regressions
         # If there is no windowed regression just use the whole image regression
@@ -513,47 +594,66 @@ class DecisionTreeSharpener(object):
         # regressions based on residuals (see section 2.3 of Gao paper)
         elif lowResFilename is not None:
             lowResScene = gdal.Open(lowResFilename)
-            outWindowScene = utils.saveImg(outWindowData,
-                                           highResFile.GetGeoTransform(),
-                                           highResFile.GetProjection(),
-                                           "MEM",
-                                           noDataValue=np.nan)
-            windowedResidual, _, _ = self._calculateResidual(outWindowScene, lowResScene)
+            outWindowScene = utils.saveImg(
+                outWindowData,
+                highResFile.GetGeoTransform(),
+                highResFile.GetProjection(),
+                "MEM",
+                noDataValue=np.nan,
+            )
+            windowedResidual, _, _ = self._calculateResidual(
+                outWindowScene, lowResScene
+            )
             outWindowScene = None
-            outFullScene = utils.saveImg(outFullData,
-                                         highResFile.GetGeoTransform(),
-                                         highResFile.GetProjection(),
-                                         "MEM",
-                                         noDataValue=np.nan)
+            outFullScene = utils.saveImg(
+                outFullData,
+                highResFile.GetGeoTransform(),
+                highResFile.GetProjection(),
+                "MEM",
+                noDataValue=np.nan,
+            )
             fullResidual, _, _ = self._calculateResidual(outFullScene, lowResScene)
             outFullScene = None
             lowResScene = None
             # windowed weight
-            ww = (1/windowedResidual)**2/((1/windowedResidual)**2 + (1/fullResidual)**2)
+            ww = (1 / windowedResidual) ** 2 / (
+                (1 / windowedResidual) ** 2 + (1 / fullResidual) ** 2
+            )
             # full weight
             fw = 1 - ww
-            outData = outWindowData*ww + outFullData*fw
+            # NOTE: Phil: The issue here is that nan propogates if the windowed data
+            outData = outWindowData * ww + outFullData * fw
         # Otherwised use just windowed regression
         else:
             outData = outWindowData
+
+        # NOTE: PB: I think this will fill the NaNs in the windowed data with the full data
+        outData = np.where(np.isnan(outWindowData), outFullData, outData)
 
         # Fix NaN's
         nanInd = np.any(nanInd, -1)
         outData[nanInd] = np.nan
 
-        outImage = utils.saveImg(outData,
-                                 highResFile.GetGeoTransform(),
-                                 highResFile.GetProjection(),
-                                 "MEM",
-                                 noDataValue=np.nan)
+        outImage = utils.saveImg(
+            outData,
+            highResFile.GetGeoTransform(),
+            highResFile.GetProjection(),
+            "MEM",
+            noDataValue=np.nan,
+        )
 
         highResFile = None
         inData = None
         return outImage
 
-    def residualAnalysis(self, disaggregatedFile, lowResFilename, lowResQualityFilename=None,
-                         doCorrection=True):
-        ''' Perform residual analysis and (optional) correction on the
+    def residualAnalysis(
+        self,
+        disaggregatedFile,
+        lowResFilename,
+        lowResQualityFilename=None,
+        doCorrection=True,
+    ):
+        """Perform residual analysis and (optional) correction on the
         disaggregated file (see [Gao2012] 2.4).
 
         Parameters
@@ -585,7 +685,7 @@ class DecisionTreeSharpener(object):
             The file object contains an in-memory, georeferenced residual
             corrected disaggregated image, or None if doCorrection was set to
             False.
-        '''
+        """
 
         if not os.path.isfile(str(disaggregatedFile)):
             scene_HR = disaggregatedFile
@@ -597,39 +697,45 @@ class DecisionTreeSharpener(object):
         else:
             quality_LR = None
 
-        residual_HR, residual_LR, gt_res = self._calculateResidual(scene_HR, scene_LR, quality_LR)
+        residual_HR, residual_LR, gt_res = self._calculateResidual(
+            scene_HR, scene_LR, quality_LR
+        )
 
         if self.disaggregatingTemperature:
             if doCorrection:
-                corrected = (residual_HR + scene_HR.GetRasterBand(1).ReadAsArray()**4)**0.25
-                correctedImage = utils.saveImg(corrected,
-                                               scene_HR.GetGeoTransform(),
-                                               scene_HR.GetProjection(),
-                                               "MEM",
-                                               noDataValue=np.nan)
+                corrected = (
+                    residual_HR + scene_HR.GetRasterBand(1).ReadAsArray() ** 4
+                ) ** 0.25
+                correctedImage = utils.saveImg(
+                    corrected,
+                    scene_HR.GetGeoTransform(),
+                    scene_HR.GetProjection(),
+                    "MEM",
+                    noDataValue=np.nan,
+                )
             else:
                 correctedImage = None
             # Convert residual back to temperature for easier visualisation
-            residual_LR = (residual_LR + 273.15**4)**0.25 - 273.15
+            residual_LR = (residual_LR + 273.15**4) ** 0.25 - 273.15
         else:
             if doCorrection:
                 corrected = residual_HR + scene_HR.GetRasterBand(1).ReadAsArray()
-                correctedImage = utils.saveImg(corrected,
-                                               scene_HR.GetGeoTransform(),
-                                               scene_HR.GetProjection(),
-                                               "MEM",
-                                               noDataValue=np.nan)
+                correctedImage = utils.saveImg(
+                    corrected,
+                    scene_HR.GetGeoTransform(),
+                    scene_HR.GetProjection(),
+                    "MEM",
+                    noDataValue=np.nan,
+                )
             else:
                 correctedImage = None
 
-        residualImage = utils.saveImg(residual_LR,
-                                      gt_res,
-                                      scene_HR.GetProjection(),
-                                      "MEM",
-                                      noDataValue=np.nan)
+        residualImage = utils.saveImg(
+            residual_LR, gt_res, scene_HR.GetProjection(), "MEM", noDataValue=np.nan
+        )
 
-        print("LR residual bias: "+str(np.nanmean(residual_LR)))
-        print("LR residual RMSD: "+str(np.nanmean(residual_LR**2)**0.5))
+        print("LR residual bias: " + str(np.nanmean(residual_LR)))
+        print("LR residual RMSD: " + str(np.nanmean(residual_LR**2) ** 0.5))
 
         scene_HR = None
         scene_LR = None
@@ -638,8 +744,7 @@ class DecisionTreeSharpener(object):
         return residualImage, correctedImage
 
     def _doFit(self, goodData_LR, goodData_HR, weight, local):
-        ''' Private function. Fits the regression tree.
-        '''
+        """Private function. Fits the regression tree."""
 
         # For local regression constrain the number of tree
         # nodes (rules) - section 2.3
@@ -652,12 +757,11 @@ class DecisionTreeSharpener(object):
         # If per leaf linear regression is used then use modified
         # DecisionTreeRegressor. Otherwise use the standard one.
         if self.perLeafLinearRegression:
-            baseRegressor = \
-                DecisionTreeRegressorWithLinearLeafRegression(self.linearRegressionExtrapolationRatio,
-                                                              self.regressorOpt)
+            baseRegressor = DecisionTreeRegressorWithLinearLeafRegression(
+                self.linearRegressionExtrapolationRatio, self.regressorOpt
+            )
         else:
-            baseRegressor = \
-                tree.DecisionTreeRegressor(**self.regressorOpt)
+            baseRegressor = tree.DecisionTreeRegressor(**self.regressorOpt)
 
         reg = ensemble.BaggingRegressor(baseRegressor, **self.baggingRegressorOpt)
         if goodData_HR.shape[0] <= 1:
@@ -667,8 +771,7 @@ class DecisionTreeSharpener(object):
         return reg
 
     def _doPredict(self, inData, reg):
-        ''' Private function. Calls the regression tree.
-        '''
+        """Private function. Calls the regression tree."""
 
         origShape = inData.shape
         if len(origShape) == 3:
@@ -682,16 +785,18 @@ class DecisionTreeSharpener(object):
 
         return outData
 
-    def _calculateResidual(self, downscaledScene, originalScene, originalSceneQuality=None):
-        ''' Private function. Calculates residual between overlapping
-            high-resolution and low-resolution images.
-        '''
+    def _calculateResidual(
+        self, downscaledScene, originalScene, originalSceneQuality=None
+    ):
+        """Private function. Calculates residual between overlapping
+        high-resolution and low-resolution images.
+        """
 
         # First subset and reproject original (low res) scene to fit with
         # downscaled (high res) scene
-        subsetScene_LR = utils.reprojectSubsetLowResScene(downscaledScene,
-                                                          originalScene,
-                                                          resampleAlg=gdal.GRA_NearestNeighbour)
+        subsetScene_LR = utils.reprojectSubsetLowResScene(
+            downscaledScene, originalScene, resampleAlg=gdal.GRA_NearestNeighbour
+        )
         data_LR = subsetScene_LR.GetRasterBand(1).ReadAsArray().astype(float)
         gt_LR = subsetScene_LR.GetGeoTransform()
 
@@ -699,39 +804,48 @@ class DecisionTreeSharpener(object):
         # bad quality pixels in the subsetted LR scene. Otherwise assume that all
         # low res pixels are of good quality.
         if originalSceneQuality is not None:
-            subsetQuality_LR = utils.reprojectSubsetLowResScene(downscaledScene,
-                                                                originalSceneQuality,
-                                                                resampleAlg=gdal.GRA_NearestNeighbour)
+            subsetQuality_LR = utils.reprojectSubsetLowResScene(
+                downscaledScene,
+                originalSceneQuality,
+                resampleAlg=gdal.GRA_NearestNeighbour,
+            )
             goodPixMask_LR = subsetQuality_LR.GetRasterBand(1).ReadAsArray()
-            goodPixMask_LR = np.in1d(goodPixMask_LR.ravel(),
-                                     self.lowResGoodQualityFlags).reshape(goodPixMask_LR.shape)
+            goodPixMask_LR = np.in1d(
+                goodPixMask_LR.ravel(), self.lowResGoodQualityFlags
+            ).reshape(goodPixMask_LR.shape)
             data_LR[~goodPixMask_LR] = np.nan
 
         # Then resample high res scene to low res pixel size
         if self.disaggregatingTemperature:
             # When working with tempratures they should be converted to
             # radiance values before aggregating to be physically accurate.
-            radianceScene = utils.saveImg(downscaledScene.GetRasterBand(1).ReadAsArray()**4,
-                                          downscaledScene.GetGeoTransform(),
-                                          downscaledScene.GetProjection(),
-                                          "MEM",
-                                          noDataValue=np.nan)
-            resMean, _ = utils.resampleHighResToLowRes(radianceScene,
-                                                       subsetScene_LR)
+            radianceScene = utils.saveImg(
+                downscaledScene.GetRasterBand(1).ReadAsArray() ** 4,
+                downscaledScene.GetGeoTransform(),
+                downscaledScene.GetProjection(),
+                "MEM",
+                noDataValue=np.nan,
+            )
+            resMean, _ = utils.resampleHighResToLowRes(radianceScene, subsetScene_LR)
             # Find the residual (difference) between the two)
             residual_LR = data_LR**4 - resMean[:, :, 0]
         else:
-            resMean, _ = utils.resampleHighResToLowRes(downscaledScene,
-                                                       subsetScene_LR)
+            resMean, _ = utils.resampleHighResToLowRes(downscaledScene, subsetScene_LR)
             # Find the residual (difference) between the two
             residual_LR = data_LR - resMean[:, :, 0]
 
         # Smooth the residual and resample to high resolution
         residual = utils.binomialSmoother(residual_LR)
-        residualDs = utils.saveImg(residual, subsetScene_LR.GetGeoTransform(),
-                                   subsetScene_LR.GetProjection(), "MEM", noDataValue=np.nan)
-        residualScene_BL = utils.resampleWithGdalWarp(residualDs, downscaledScene,
-                                                      resampleAlg="bilinear")
+        residualDs = utils.saveImg(
+            residual,
+            subsetScene_LR.GetGeoTransform(),
+            subsetScene_LR.GetProjection(),
+            "MEM",
+            noDataValue=np.nan,
+        )
+        residualScene_BL = utils.resampleWithGdalWarp(
+            residualDs, downscaledScene, resampleAlg="bilinear"
+        )
         residualDs = None
 
         residual = residualScene_BL.GetRasterBand(1).ReadAsArray()
@@ -747,11 +861,17 @@ class DecisionTreeSharpener(object):
         downscaled = downscaledScene.GetRasterBand(1).ReadAsArray()
         if downscaled.shape != residual.shape:
             temp = np.zeros(downscaled.shape)
-            temp[:residual.shape[0], :residual.shape[1]] = residual
-            temp[residual.shape[0]:, :] = \
-                temp[2*(residual.shape[0] - downscaled.shape[0]):residual.shape[0] - downscaled.shape[0], :]
-            temp[:, residual.shape[1]:] = \
-                temp[:, 2*(residual.shape[1] - downscaled.shape[1]):residual.shape[1] - downscaled.shape[1]]
+            temp[: residual.shape[0], : residual.shape[1]] = residual
+            temp[residual.shape[0] :, :] = temp[
+                2 * (residual.shape[0] - downscaled.shape[0]) : residual.shape[0]
+                - downscaled.shape[0],
+                :,
+            ]
+            temp[:, residual.shape[1] :] = temp[
+                :,
+                2 * (residual.shape[1] - downscaled.shape[1]) : residual.shape[1]
+                - downscaled.shape[1],
+            ]
 
             residual = temp
 
@@ -763,7 +883,7 @@ class DecisionTreeSharpener(object):
 
 
 class NeuralNetworkSharpener(DecisionTreeSharpener):
-    ''' Neural Network based sharpening (disaggregation) of low-resolution
+    """Neural Network based sharpening (disaggregation) of low-resolution
     images using high-resolution images. The implementation is mostly based on [Gao2012] as
     implemented in DescisionTreeSharpener except that Decision Tree regressor is replaced by
     Neural Network regressor.
@@ -846,29 +966,33 @@ class NeuralNetworkSharpener(DecisionTreeSharpener):
     .. [Gao2012] Gao, F., Kustas, W. P., & Anderson, M. C. (2012). A Data
        Mining Approach for Sharpening Thermal Satellite Imagery over Land.
        Remote Sensing, 4(11), 3287–3319. https://doi.org/10.3390/rs4113287
-    '''
+    """
 
-    def __init__(self,
-                 highResFiles,
-                 lowResFiles,
-                 lowResQualityFiles=[],
-                 lowResGoodQualityFlags=[],
-                 cvHomogeneityThreshold=0.25,
-                 movingWindowSize=0,
-                 disaggregatingTemperature=False,
-                 regressionType=REG_sknn_ann,
-                 regressorOpt={},
-                 baggingRegressorOpt={}):
+    def __init__(
+        self,
+        highResFiles,
+        lowResFiles,
+        lowResQualityFiles=[],
+        lowResGoodQualityFlags=[],
+        cvHomogeneityThreshold=0.25,
+        movingWindowSize=0,
+        disaggregatingTemperature=False,
+        regressionType=REG_sknn_ann,
+        regressorOpt={},
+        baggingRegressorOpt={},
+    ):
 
-        super(NeuralNetworkSharpener, self).__init__(highResFiles,
-                                                     lowResFiles,
-                                                     lowResQualityFiles,
-                                                     lowResGoodQualityFlags,
-                                                     cvHomogeneityThreshold,
-                                                     movingWindowSize,
-                                                     disaggregatingTemperature,
-                                                     regressorOpt=regressorOpt,
-                                                     baggingRegressorOpt=baggingRegressorOpt)
+        super(NeuralNetworkSharpener, self).__init__(
+            highResFiles,
+            lowResFiles,
+            lowResQualityFiles,
+            lowResGoodQualityFlags,
+            cvHomogeneityThreshold,
+            movingWindowSize,
+            disaggregatingTemperature,
+            regressorOpt=regressorOpt,
+            baggingRegressorOpt=baggingRegressorOpt,
+        )
         self.regressionType = regressionType
         # Move the import of sknn here because this library is not easy to
         # install but this shouldn't prevent the use of other parts of pyDMS.
@@ -876,26 +1000,29 @@ class NeuralNetworkSharpener(DecisionTreeSharpener):
             import sknn.mlp as ann_sknn
 
     def _doFit(self, goodData_LR, goodData_HR, weight, local):
-        ''' Private function. Fits the neural network.
-        '''
+        """Private function. Fits the neural network."""
 
         # Once all the samples have been picked build the regression using
         # neural network approach
-        print('Fitting neural network')
+        print("Fitting neural network")
         HR_scaler = preprocessing.StandardScaler()
         data_HR = HR_scaler.fit_transform(goodData_HR)
         LR_scaler = preprocessing.StandardScaler()
         data_LR = LR_scaler.fit_transform(goodData_LR.reshape(-1, 1))
         if self.regressionType == REG_sknn_ann:
             layers = []
-            if 'hidden_layer_sizes' in self.regressorOpt.keys():
-                for layer in self.regressorOpt['hidden_layer_sizes']:
-                    layers.append(ann_sknn.Layer(self.regressorOpt['activation'], units=layer))
+            if "hidden_layer_sizes" in self.regressorOpt.keys():
+                for layer in self.regressorOpt["hidden_layer_sizes"]:
+                    layers.append(
+                        ann_sknn.Layer(self.regressorOpt["activation"], units=layer)
+                    )
             else:
-                layers.append(ann_sknn.Layer(self.regressorOpt['activation'], units=100))
-            self.regressorOpt.pop('activation')
-            self.regressorOpt.pop('hidden_layer_sizes')
-            output_layer = ann_sknn.Layer('Linear', units=1)
+                layers.append(
+                    ann_sknn.Layer(self.regressorOpt["activation"], units=100)
+                )
+            self.regressorOpt.pop("activation")
+            self.regressorOpt.pop("hidden_layer_sizes")
+            output_layer = ann_sknn.Layer("Linear", units=1)
             layers.append(output_layer)
             baseRegressor = ann_sknn.Regressor(layers, **self.regressorOpt)
         else:
@@ -912,8 +1039,7 @@ class NeuralNetworkSharpener(DecisionTreeSharpener):
         return {"reg": reg, "HR_scaler": HR_scaler, "LR_scaler": LR_scaler}
 
     def _doPredict(self, inData, nn):
-        ''' Private function. Calls the neural network.
-        '''
+        """Private function. Calls the neural network."""
 
         reg = nn["reg"]
         HR_scaler = nn["HR_scaler"]
