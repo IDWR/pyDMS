@@ -505,20 +505,24 @@ class DecisionTreeSharpener(object):
         outWindowData = np.empty((ysize, xsize))*np.nan
         outFullData = np.empty((ysize, xsize))*np.nan
         # Do the downscailing on the moving windows if there are any and also process the full
-        # scene using the same windows to optimize memory usage
+        # scene using the same windows to optimize memory usage. The whole-image regression
+        # is applied even in windows with no local regression (e.g. too few training
+        # samples), so it can fill those areas after the combination below.
         for i, extent in enumerate(self.windowExtents):
             print(i)
+            if self.reg[i] is None and self.reg[-1] is None:
+                continue
+            [minX, minY] = utils.point2pix(extent[0], gt)  # UL
+            [minX, minY] = [max(minX, 0), max(minY, 0)]
+            [maxX, maxY] = utils.point2pix(extent[1], gt)  # LR
+            [maxX, maxY] = [min(maxX, xsize), min(maxY, ysize)]
+            windowInData = inData[minY:maxY, minX:maxX, :]
             if self.reg[i] is not None:
-                [minX, minY] = utils.point2pix(extent[0], gt)  # UL
-                [minX, minY] = [max(minX, 0), max(minY, 0)]
-                [maxX, maxY] = utils.point2pix(extent[1], gt)  # LR
-                [maxX, maxY] = [min(maxX, xsize), min(maxY, ysize)]
-                windowInData = inData[minY:maxY, minX:maxX, :]
                 outWindowData[minY:maxY, minX:maxX] = \
                     self._doPredict(windowInData, self.reg[i])
-                if self.reg[-1] is not None:
-                    outFullData[minY:maxY, minX:maxX] = \
-                        self._doPredict(windowInData, self.reg[-1])
+            if self.reg[-1] is not None:
+                outFullData[minY:maxY, minX:maxX] = \
+                    self._doPredict(windowInData, self.reg[-1])
 
         # If there were no moving windows then do the downscailing on the whole input image
         if np.all(np.isnan(outFullData)) and self.reg[-1] is not None:
@@ -565,6 +569,11 @@ class DecisionTreeSharpener(object):
         # Otherwised use just windowed regression
         else:
             outData = outWindowData
+
+        # Fall back to the whole-image regression where the combination is NaN --
+        # windows with no local regression, or NaN combination weights. True nodata
+        # is re-masked below.
+        outData = np.where(np.isnan(outData), outFullData, outData)
 
         # Fix NaN's
         nanInd = np.any(nanInd, -1)
