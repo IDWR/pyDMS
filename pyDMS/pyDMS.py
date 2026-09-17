@@ -509,7 +509,6 @@ class DecisionTreeSharpener(object):
         # is applied even in windows with no local regression (e.g. too few training
         # samples), so it can fill those areas after the combination below.
         for i, extent in enumerate(self.windowExtents):
-            print(i)
             if self.reg[i] is None and self.reg[-1] is None:
                 continue
             [minX, minY] = utils.point2pix(extent[0], gt)  # UL
